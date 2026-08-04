@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import type { BoardState } from "./model/model";
-import { initialBoard, nextColor, notesReducer } from "./model/model";
+import { nextColor, notesReducer } from "./model/model";
 import type { Rect } from "./model/geometry";
+import { createMockApi } from "./model/persistence";
+import { loadBoard } from "./model/persistence";
 import { useDragEngine } from "./hooks/useDragEngine";
+import { useDebouncedSave } from "./hooks/useDebouncedSave";
 import { NoteView } from "./components/NoteView";
 import { TrashZone } from "./components/TrashZone";
 import { RenderHud } from "./dev/RenderHud";
+
+export const api = createMockApi();
 
 let idCounter = 0;
 // The fallback includes a timestamp so it cannot collide with ids saved by
@@ -16,7 +21,7 @@ const newId = () =>
     : `n${Date.now().toString(36)}-${(++idCounter).toString(36)}`;
 
 export default function App() {
-  const [state, dispatch] = useReducer(notesReducer, initialBoard);
+  const [state, dispatch] = useReducer(notesReducer, undefined, loadBoard);
 
   // The engine's handlers are created once, so they read the current state
   // through this ref instead of a stale closure.
@@ -39,6 +44,8 @@ export default function App() {
     onGhost: setGhost,
     createId: newId,
   });
+
+  useDebouncedSave(state, api);
 
   const registerNode = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) nodesRef.current.set(id, el);
