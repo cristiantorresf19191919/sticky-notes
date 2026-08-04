@@ -5,7 +5,7 @@
  */
 
 import type { BoardState, Note, NoteColor } from "./model";
-import { COLOR_ORDER, initialBoard } from "./model";
+import { COLOR_ORDER, initialBoard, MIN_H, MIN_W } from "./model";
 
 export const STORAGE_KEY = "sticky-notes/v1";
 
@@ -18,16 +18,18 @@ interface PersistedV1 {
 const isColor = (v: unknown): v is NoteColor =>
   typeof v === "string" && (COLOR_ORDER as readonly string[]).includes(v);
 
+// Check for finite numbers, not just typeof number: JSON.parse turns "1e999"
+// into Infinity, and an Infinity coordinate turns later drag math into NaN.
 const isNote = (v: unknown): v is Note => {
   if (typeof v !== "object" || v === null) return false;
   const n = v as Record<string, unknown>;
   return (
     typeof n.id === "string" &&
-    typeof n.x === "number" &&
-    typeof n.y === "number" &&
-    typeof n.w === "number" &&
-    typeof n.h === "number" &&
-    typeof n.z === "number" &&
+    Number.isFinite(n.x) &&
+    Number.isFinite(n.y) &&
+    Number.isFinite(n.w) &&
+    Number.isFinite(n.h) &&
+    Number.isFinite(n.z) &&
     isColor(n.color) &&
     typeof n.text === "string"
   );
@@ -35,7 +37,9 @@ const isNote = (v: unknown): v is Note => {
 
 /**
  * Never trust storage: parse as unknown and validate, or fall back to the
- * seed notes.
+ * seed notes. Checking the shape alone is not enough, so the load also
+ * restores the app's invariants: unique ids, minimum sizes, and a z counter
+ * above every stored z.
  */
 export function loadBoard(): BoardState {
   try {
@@ -44,10 +48,18 @@ export function loadBoard(): BoardState {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return initialBoard;
     const p = parsed as Partial<PersistedV1>;
-    if (p.v !== 1 || !Array.isArray(p.notes) || typeof p.nextZ !== "number")
+    if (p.v !== 1 || !Array.isArray(p.notes) || !Number.isFinite(p.nextZ))
       return initialBoard;
     if (!p.notes.every(isNote)) return initialBoard;
-    return { notes: p.notes, nextZ: p.nextZ };
+    if (new Set(p.notes.map((n) => n.id)).size !== p.notes.length)
+      return initialBoard;
+    const notes = p.notes.map((n) => ({
+      ...n,
+      w: Math.max(MIN_W, n.w),
+      h: Math.max(MIN_H, n.h),
+    }));
+    const topZ = notes.reduce((top, n) => Math.max(top, n.z), 0);
+    return { notes, nextZ: Math.max(p.nextZ as number, topZ + 1) };
   } catch {
     return initialBoard;
   }

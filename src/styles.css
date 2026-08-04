@@ -63,6 +63,10 @@ body {
   transition: opacity 120ms ease;
 }
 
+.note:active {
+  cursor: grabbing;
+}
+
 .note[data-over-trash="true"] {
   opacity: 0.45;
 }
@@ -128,6 +132,9 @@ body {
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
+  /* keep the trash visible above notes without blocking their clicks */
+  z-index: 100000;
+  pointer-events: none;
   width: 72px;
   height: 56px;
   display: grid;

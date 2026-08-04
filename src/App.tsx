@@ -29,6 +29,8 @@ export default function App() {
   stateRef.current = state;
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const editingRef = useRef<string | null>(editingId);
+  editingRef.current = editingId;
   const [ghost, setGhost] = useState<Rect | null>(null);
 
   const nodesRef = useRef(new Map<string, HTMLDivElement>());
@@ -41,6 +43,7 @@ export default function App() {
     nodesRef,
     trashRef,
     boardRef,
+    editingRef,
     onGhost: setGhost,
     createId: newId,
   });

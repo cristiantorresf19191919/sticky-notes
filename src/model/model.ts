@@ -100,13 +100,18 @@ export function notesReducer(state: BoardState, action: NotesAction): BoardState
     case "REMOVE":
       return { ...state, notes: state.notes.filter((n) => n.id !== action.id) };
 
-    case "EDIT_TEXT":
+    case "EDIT_TEXT": {
+      // If the text did not change, return the same state so no render or
+      // save happens.
+      const target = state.notes.find((n) => n.id === action.id);
+      if (!target || target.text === action.text) return state;
       return {
         ...state,
         notes: state.notes.map((n) =>
           n.id === action.id ? { ...n, text: action.text } : n,
         ),
       };
+    }
 
     case "SET_COLOR":
       return {

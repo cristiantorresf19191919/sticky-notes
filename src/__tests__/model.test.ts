@@ -63,6 +63,11 @@ describe("notesReducer", () => {
     const colored = notesReducer(initialBoard, { type: "SET_COLOR", id: "b", color: "rose" });
     expect(findNote(colored.notes, "b").color).toBe("rose");
     expect(initialBoard.notes).toHaveLength(2);
+    // Committing an unchanged draft is a same-reference no-op: no render,
+    // no persistence cycle.
+    expect(
+      notesReducer(initialBoard, { type: "EDIT_TEXT", id: "b", text: "Double-click to edit" }),
+    ).toBe(initialBoard);
   });
 });
 
