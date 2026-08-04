@@ -45,6 +45,42 @@ body {
   position: relative;
   flex: 1;
   overflow: hidden;
+  /* fast drags must not start text selection or touch scrolling */
+  user-select: none;
+  touch-action: none;
   background:
     radial-gradient(circle, #1e293b 1px, transparent 1px) 0 0 / 24px 24px;
+}
+
+.note {
+  position: absolute;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  color: #1f2937;
+  cursor: grab;
+  display: flex;
+  transition: opacity 120ms ease;
+}
+
+.note-text {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  overflow: hidden;
+  pointer-events: none; /* presses go to the note div */
+}
+
+.render-hud {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  padding: 8px 10px;
+  font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 99999;
 }
