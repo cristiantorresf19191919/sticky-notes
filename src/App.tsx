@@ -65,6 +65,7 @@ export default function App() {
             key={note.id}
             note={note}
             onNotePointerDown={engine.onNotePointerDown}
+            onResizePointerDown={engine.onResizePointerDown}
             registerNode={registerNode}
           />
         ))}

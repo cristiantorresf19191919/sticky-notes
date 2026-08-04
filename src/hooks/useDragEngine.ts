@@ -1,5 +1,5 @@
 /**
- * One engine for the drag gestures: create and move.
+ * One engine for the three drag gestures: create, move and resize.
  *
  * While a pointer is down, nothing here updates React state. The one
  * exception is the create ghost rectangle, a single div updated at most once
@@ -19,7 +19,7 @@ import { normalizeRect } from "../model/geometry";
 
 export const DRAG_THRESHOLD = 3;
 
-type DragKind = "create" | "move";
+type DragKind = "create" | "move" | "resize";
 
 interface DragSession {
   kind: DragKind;
@@ -29,6 +29,8 @@ interface DragSession {
   startY: number;
   baseX: number;
   baseY: number;
+  baseW: number;
+  baseH: number;
   latestX: number;
   latestY: number;
   moved: boolean;
@@ -53,6 +55,7 @@ export interface DragEngineDeps {
 export interface DragEngine {
   onBoardPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void;
   onNotePointerDown: (id: string, e: ReactPointerEvent<HTMLDivElement>) => void;
+  onResizePointerDown: (id: string, e: ReactPointerEvent<HTMLDivElement>) => void;
 }
 
 export function useDragEngine(deps: DragEngineDeps): DragEngine {
@@ -80,7 +83,12 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       if (!el) return;
       const dx = s.latestX - s.startX;
       const dy = s.latestY - s.startY;
-      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      if (s.kind === "move") {
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
+      } else {
+        el.style.width = `${Math.max(MIN_W, s.baseW + dx)}px`;
+        el.style.height = `${Math.max(MIN_H, s.baseH + dy)}px`;
+      }
     };
 
     const schedule = (s: DragSession) => {
@@ -102,7 +110,13 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
         return;
       }
       const el = noteEl(s.id);
-      if (el) el.style.transform = "";
+      if (el) {
+        el.style.transform = "";
+        if (s.kind === "resize") {
+          el.style.width = `${s.baseW}px`;
+          el.style.height = `${s.baseH}px`;
+        }
+      }
     };
 
     const onMove = (ev: MouseEvent) => {
@@ -158,8 +172,20 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
         return;
       }
 
+      if (s.kind === "move") {
+        if (s.moved) {
+          dispatch({ type: "MOVE", id: s.id, x: s.baseX + dx, y: s.baseY + dy });
+        }
+        return;
+      }
+
       if (s.moved) {
-        dispatch({ type: "MOVE", id: s.id, x: s.baseX + dx, y: s.baseY + dy });
+        dispatch({
+          type: "RESIZE",
+          id: s.id,
+          w: Math.max(MIN_W, s.baseW + dx),
+          h: Math.max(MIN_H, s.baseH + dy),
+        });
       }
     };
 
@@ -190,6 +216,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       startY: e.clientY,
       baseX: 0,
       baseY: 0,
+      baseW: 0,
+      baseH: 0,
       latestX: e.clientX,
       latestY: e.clientY,
       moved: false,
@@ -222,6 +250,19 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
         const s = blankSession("move", id, e);
         s.baseX = note.x;
         s.baseY = note.y;
+        begin(s);
+      },
+
+      onResizePointerDown: (id, e) => {
+        if (e.button !== 0 || sessionRef.current) return;
+        // Stop the event here so the move handler never sees a press on
+        // the handle.
+        e.stopPropagation();
+        const note = depsRef.current.stateRef.current.notes.find((n) => n.id === id);
+        if (!note) return;
+        const s = blankSession("resize", id, e);
+        s.baseW = note.w;
+        s.baseH = note.h;
         begin(s);
       },
     };

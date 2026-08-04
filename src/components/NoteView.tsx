@@ -13,6 +13,7 @@ const COLOR_BG: Record<NoteColor, string> = {
 export interface NoteViewProps {
   note: Note;
   onNotePointerDown: (id: string, e: ReactPointerEvent<HTMLDivElement>) => void;
+  onResizePointerDown: (id: string, e: ReactPointerEvent<HTMLDivElement>) => void;
   registerNode: (id: string, el: HTMLDivElement | null) => void;
 }
 
@@ -23,6 +24,7 @@ export interface NoteViewProps {
 export const NoteView = memo(function NoteView({
   note,
   onNotePointerDown,
+  onResizePointerDown,
   registerNode,
 }: NoteViewProps) {
   bumpRenderCount(note.id);
@@ -46,6 +48,11 @@ export const NoteView = memo(function NoteView({
       <div className="note-text" data-testid={`text-${note.id}`}>
         {note.text}
       </div>
+      <div
+        className="note-resize"
+        data-testid={`resize-${note.id}`}
+        onPointerDown={(e) => onResizePointerDown(note.id, e)}
+      />
     </div>
   );
 });

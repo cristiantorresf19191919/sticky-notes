@@ -72,6 +72,18 @@ body {
   pointer-events: none; /* presses go to the note div */
 }
 
+.note-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 0, 0, 0.3) 50%);
+  border-bottom-right-radius: 6px;
+}
+
 .ghost {
   position: absolute;
   border: 1.5px dashed #60a5fa;
