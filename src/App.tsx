@@ -4,6 +4,7 @@ import { initialBoard, notesReducer } from "./model/model";
 import type { Rect } from "./model/geometry";
 import { useDragEngine } from "./hooks/useDragEngine";
 import { NoteView } from "./components/NoteView";
+import { TrashZone } from "./components/TrashZone";
 import { RenderHud } from "./dev/RenderHud";
 
 let idCounter = 0;
@@ -25,12 +26,14 @@ export default function App() {
   const [ghost, setGhost] = useState<Rect | null>(null);
 
   const nodesRef = useRef(new Map<string, HTMLDivElement>());
+  const trashRef = useRef<HTMLDivElement | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
 
   const engine = useDragEngine({
     dispatch,
     stateRef,
     nodesRef,
+    trashRef,
     boardRef,
     onGhost: setGhost,
     createId: newId,
@@ -70,6 +73,7 @@ export default function App() {
           />
         ))}
         {ghostStyle && <div className="ghost" data-testid="ghost" style={ghostStyle} />}
+        <TrashZone ref={trashRef} />
       </div>
       {import.meta.env.DEV && <RenderHud />}
     </main>

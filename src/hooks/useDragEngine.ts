@@ -15,7 +15,7 @@ import type { Dispatch, PointerEvent as ReactPointerEvent, RefObject } from "rea
 import type { BoardState, NotesAction } from "../model/model";
 import { DEFAULT_H, DEFAULT_W, MIN_H, MIN_W } from "../model/model";
 import type { Rect } from "../model/geometry";
-import { normalizeRect } from "../model/geometry";
+import { domRectToRect, normalizeRect, pointInRect } from "../model/geometry";
 
 export const DRAG_THRESHOLD = 3;
 
@@ -34,8 +34,11 @@ interface DragSession {
   latestX: number;
   latestY: number;
   moved: boolean;
+  /** Measured once at gesture start: one layout read per drag, not per move. */
+  trashRect: Rect | null;
   boardLeft: number;
   boardTop: number;
+  overTrash: boolean;
   /** Set before scheduling so a synchronous requestAnimationFrame (as
    *  stubbed in tests) can clear it from inside the callback. */
   framePending: boolean;
@@ -47,6 +50,7 @@ export interface DragEngineDeps {
   /** Mirror of the reducer state, so the stable handlers read fresh data. */
   stateRef: RefObject<BoardState>;
   nodesRef: RefObject<Map<string, HTMLDivElement>>;
+  trashRef: RefObject<HTMLDivElement | null>;
   boardRef: RefObject<HTMLDivElement | null>;
   onGhost: (rect: Rect | null) => void;
   createId: () => string;
@@ -85,6 +89,21 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       const dy = s.latestY - s.startY;
       if (s.kind === "move") {
         el.style.transform = `translate(${dx}px, ${dy}px)`;
+        // Show deletion feedback only for a real drag. Small jitter during
+        // a click must not arm the trash.
+        const over =
+          s.moved && s.trashRect !== null && pointInRect(s.latestX, s.latestY, s.trashRect);
+        if (over !== s.overTrash) {
+          s.overTrash = over;
+          const trash = depsRef.current.trashRef.current;
+          if (over) {
+            el.dataset.overTrash = "true";
+            if (trash) trash.dataset.armed = "true";
+          } else {
+            delete el.dataset.overTrash;
+            if (trash) delete trash.dataset.armed;
+          }
+        }
       } else {
         el.style.width = `${Math.max(MIN_W, s.baseW + dx)}px`;
         el.style.height = `${Math.max(MIN_H, s.baseH + dy)}px`;
@@ -110,13 +129,16 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
         return;
       }
       const el = noteEl(s.id);
+      const trash = depsRef.current.trashRef.current;
       if (el) {
         el.style.transform = "";
+        delete el.dataset.overTrash;
         if (s.kind === "resize") {
           el.style.width = `${s.baseW}px`;
           el.style.height = `${s.baseH}px`;
         }
       }
+      if (trash) delete trash.dataset.armed;
     };
 
     const onMove = (ev: MouseEvent) => {
@@ -173,7 +195,13 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       }
 
       if (s.kind === "move") {
-        if (s.moved) {
+        // Deleting requires a real drag. A plain click on a note that sits
+        // over the trash must not delete it.
+        const droppedInTrash =
+          s.moved && s.trashRect !== null && pointInRect(ev.clientX, ev.clientY, s.trashRect);
+        if (droppedInTrash) {
+          dispatch({ type: "REMOVE", id: s.id });
+        } else if (s.moved) {
           dispatch({ type: "MOVE", id: s.id, x: s.baseX + dx, y: s.baseY + dy });
         }
         return;
@@ -221,8 +249,10 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       latestX: e.clientX,
       latestY: e.clientY,
       moved: false,
+      trashRect: null,
       boardLeft: 0,
       boardTop: 0,
+      overTrash: false,
       framePending: false,
       frameId: 0,
     });
@@ -250,6 +280,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
         const s = blankSession("move", id, e);
         s.baseX = note.x;
         s.baseY = note.y;
+        const trash = depsRef.current.trashRef.current;
+        if (trash) s.trashRect = domRectToRect(trash.getBoundingClientRect());
         begin(s);
       },
 
