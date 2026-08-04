@@ -1,0 +1,50 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 1024px; /* desktop only, minimum 1024x768 */
+}
+
+.toolbar {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.toolbar h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.toolbar p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.board {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background:
+    radial-gradient(circle, #1e293b 1px, transparent 1px) 0 0 / 24px 24px;
+}
