@@ -76,6 +76,33 @@ body {
   pointer-events: none; /* presses go to the note div */
 }
 
+.note-editor {
+  flex: 1;
+  margin: 4px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  border: 1px dashed rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+  resize: none;
+  outline: none;
+}
+
+.note-color {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.35);
+  background: conic-gradient(#fef3c7 0 25%, #d1fae5 0 50%, #e0f2fe 0 75%, #ffe4e6 0);
+  cursor: pointer;
+  padding: 0;
+}
+
 .note-resize {
   position: absolute;
   right: 0;

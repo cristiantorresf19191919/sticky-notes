@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef, useState } from "react";
 import type { BoardState } from "./model/model";
-import { initialBoard, notesReducer } from "./model/model";
+import { initialBoard, nextColor, notesReducer } from "./model/model";
 import type { Rect } from "./model/geometry";
 import { useDragEngine } from "./hooks/useDragEngine";
 import { NoteView } from "./components/NoteView";
@@ -23,6 +23,7 @@ export default function App() {
   const stateRef = useRef<BoardState>(state);
   stateRef.current = state;
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [ghost, setGhost] = useState<Rect | null>(null);
 
   const nodesRef = useRef(new Map<string, HTMLDivElement>());
@@ -44,6 +45,17 @@ export default function App() {
     else nodesRef.current.delete(id);
   }, []);
 
+  const handleStartEdit = useCallback((id: string) => setEditingId(id), []);
+  const handleCancelEdit = useCallback(() => setEditingId(null), []);
+  const handleCommitText = useCallback((id: string, text: string) => {
+    dispatch({ type: "EDIT_TEXT", id, text });
+    setEditingId(null);
+  }, []);
+  const handleCycleColor = useCallback((id: string) => {
+    const note = stateRef.current.notes.find((n) => n.id === id);
+    if (note) dispatch({ type: "SET_COLOR", id, color: nextColor(note.color) });
+  }, []);
+
   const ghostStyle = useMemo(
     () =>
       ghost
@@ -56,6 +68,7 @@ export default function App() {
     <main className="app">
       <header className="toolbar">
         <h1>Sticky Notes</h1>
+        <p>Draw on empty space to create · drag to move · corner to resize · drop on 🗑 to delete · double-click to edit</p>
       </header>
       <div
         className="board"
@@ -67,8 +80,13 @@ export default function App() {
           <NoteView
             key={note.id}
             note={note}
+            isEditing={editingId === note.id}
             onNotePointerDown={engine.onNotePointerDown}
             onResizePointerDown={engine.onResizePointerDown}
+            onStartEdit={handleStartEdit}
+            onCommitText={handleCommitText}
+            onCancelEdit={handleCancelEdit}
+            onCycleColor={handleCycleColor}
             registerNode={registerNode}
           />
         ))}
