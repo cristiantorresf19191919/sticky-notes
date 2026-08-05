@@ -5,7 +5,8 @@ libraries, no drag-and-drop libraries, no state libraries. All four required
 features are implemented (create at a position/size by drawing, move by
 dragging, resize by dragging, delete by dropping on the trash zone) plus all
 five bonus features (text editing, bring-to-front, localStorage restore,
-colors, an async-mocked REST save).
+colors, an async-mocked REST save — save-only by design, hydration reads
+localStorage).
 
 ## Build & run
 
@@ -16,7 +17,7 @@ npm install
 npm run dev        # development server (http://localhost:5173)
 npm run build      # typecheck + production build into dist/
 npm run preview    # serve the production build
-npm test           # vitest: 24 tests (unit + jsdom integration)
+npm test           # vitest: 31 tests (unit + jsdom integration)
 ```
 
 ## Architecture

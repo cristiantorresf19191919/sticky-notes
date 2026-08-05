@@ -1,9 +1,10 @@
 /**
  * One engine for the three drag gestures: create, move and resize.
  *
- * While a pointer is down, nothing here updates React state. The one
- * exception is the create ghost rectangle, a single div updated at most once
- * per frame. The session lives in a ref, tracking listeners are attached to
+ * While a pointer is down, nothing here updates React state, with two
+ * exceptions: the bring-to-front dispatch at the moment a note is pressed,
+ * and the create ghost rectangle, a single div updated at most once per
+ * frame. The session lives in a ref, tracking listeners are attached to
  * window so the gesture keeps working when the cursor leaves the note or the
  * board, and visual updates during the drag are direct DOM writes batched to
  * one per animation frame. Each gesture ends with at most one dispatch; a
