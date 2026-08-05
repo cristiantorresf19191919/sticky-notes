@@ -48,7 +48,7 @@ body {
   /* fast drags must not start text selection or touch scrolling */
   user-select: none;
   touch-action: none;
-  cursor: crosshair; /* hint that empty space is drawable */
+  cursor: crosshair;
   background:
     radial-gradient(circle, #1e293b 1px, transparent 1px) 0 0 / 24px 24px;
 }
@@ -77,7 +77,7 @@ body {
   font-size: 0.9rem;
   white-space: pre-wrap;
   overflow: hidden;
-  pointer-events: none; /* presses go to the note div */
+  pointer-events: none;
 }
 
 .note-editor {

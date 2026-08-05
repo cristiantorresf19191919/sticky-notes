@@ -1,8 +1,7 @@
 /**
- * Pure geometry helpers. The app does not ask the DOM what is under the
- * cursor (during a drag, elementFromPoint would return the dragged note
- * itself). Rects are measured once per gesture and all hit testing after
- * that is plain math.
+ * Pure geometry helpers. The app never asks the DOM what is under the cursor
+ * (mid-drag, elementFromPoint would return the dragged note itself); rects
+ * are measured once per gesture and hit testing after that is plain math.
  */
 
 export interface Rect {

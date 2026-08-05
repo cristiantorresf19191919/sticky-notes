@@ -1,14 +1,10 @@
 /**
  * One engine for the three drag gestures: create, move and resize.
- *
- * While a pointer is down, nothing here updates React state, with two
- * exceptions: the bring-to-front dispatch at the moment a note is pressed,
- * and the create ghost rectangle, a single div updated at most once per
- * frame. The session lives in a ref, tracking listeners are attached to
- * window so the gesture keeps working when the cursor leaves the note or the
- * board, and visual updates during the drag are direct DOM writes batched to
- * one per animation frame. Each gesture ends with at most one dispatch; a
- * plain click, Escape, or a cancelled pointer dispatches nothing.
+ * While a pointer is down nothing here updates React state, except the
+ * bring-to-front dispatch on press and the create ghost (one div, at most
+ * once per frame). Tracking listeners live on window so a gesture survives
+ * the cursor leaving the note; transient visuals are direct DOM writes
+ * batched per animation frame; a gesture ends with at most one dispatch.
  */
 
 import { useRef } from "react";
@@ -26,8 +22,7 @@ interface DragSession {
   kind: DragKind;
   /** Note id; "" for a create gesture. */
   id: string;
-  /** The pointer that started the gesture. Events from other pointers are
-   *  ignored so a second pointer cannot interfere with an active drag. */
+  /** Pointer that started the gesture; events from other pointers are ignored. */
   pointerId: number | undefined;
   startX: number;
   startY: number;
@@ -45,8 +40,6 @@ interface DragSession {
   boardW: number;
   boardH: number;
   overTrash: boolean;
-  /** Set before scheduling so a synchronous requestAnimationFrame (as
-   *  stubbed in tests) can clear it from inside the callback. */
   framePending: boolean;
   frameId: number;
 }
@@ -58,8 +51,7 @@ export interface DragEngineDeps {
   nodesRef: RefObject<Map<string, HTMLDivElement>>;
   trashRef: RefObject<HTMLDivElement | null>;
   boardRef: RefObject<HTMLDivElement | null>;
-  /** Non-null while a note's editor is open. A board press then only closes
-   *  the editor (through its blur) and does not create a note. */
+  /** Non-null while an editor is open; a board press then only dismisses it. */
   editingRef: RefObject<string | null>;
   onGhost: (rect: Rect | null) => void;
   createId: () => string;
@@ -85,9 +77,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       return id === undefined || s.pointerId === undefined || id === s.pointerId;
     };
 
-    // Keep the note fully inside the board, both during the drag and at
-    // commit, so it always stays reachable. If the board size is unknown
-    // (0x0 in tests) the delta passes through unchanged.
+    // Keep the note inside the board during the drag and at commit, so it
+    // always stays reachable. An unmeasured board leaves the delta unchanged.
     const clampMoveDelta = (s: DragSession, dx: number, dy: number) => {
       if (s.boardW <= 0 || s.boardH <= 0) return { dx, dy };
       const x = clamp(s.baseX + dx, 0, Math.max(0, s.boardW - s.baseW));
@@ -95,8 +86,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       return { dx: x - s.baseX, dy: y - s.baseY };
     };
 
-    // A resize cannot push the note past the board edge, where its handle
-    // would become unreachable.
+    // A resize may not push the note past the board edge, where its own
+    // handle would become unreachable.
     const clampSize = (s: DragSession, w: number, h: number) => {
       let cw = Math.max(MIN_W, w);
       let ch = Math.max(MIN_H, h);
@@ -126,8 +117,7 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       if (s.kind === "move") {
         const d = clampMoveDelta(s, dx, dy);
         el.style.transform = `translate(${d.dx}px, ${d.dy}px)`;
-        // Show deletion feedback only for a real drag. Small jitter during
-        // a click must not arm the trash.
+        // Feedback only for a real drag: click jitter must not arm the trash.
         const over =
           s.moved && s.trashRect !== null && pointInRect(s.latestX, s.latestY, s.trashRect);
         if (over !== s.overTrash) {
@@ -157,9 +147,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       });
     };
 
-    /** Roll back everything this gesture drew. On a resize commit React
-     *  immediately re-renders the committed size, so the same rollback works
-     *  for commit, click and abort. */
+    // Rolls back everything the gesture drew. A resize commit is re-rendered
+    // by React right after, so the same rollback serves commit and abort.
     const clearTransients = (s: DragSession) => {
       if (s.framePending) {
         cancelAnimationFrame(s.frameId);
@@ -185,8 +174,7 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
     const onMove = (ev: MouseEvent) => {
       const s = sessionRef.current;
       if (!s || !samePointer(s, ev)) return;
-      // If no button is pressed anymore, the pointerup was missed somewhere.
-      // Abort instead of keeping a stuck drag.
+      // No button pressed means the pointerup was missed; end the stuck drag.
       if (ev.buttons === 0) {
         end();
         return;
@@ -247,8 +235,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       }
 
       if (s.kind === "move") {
-        // Deleting requires a real drag. A plain click on a note that sits
-        // over the trash must not delete it.
+        // Deleting requires a real drag; a click on a note over the trash
+        // raises it instead.
         const droppedInTrash =
           s.moved && s.trashRect !== null && pointInRect(ev.clientX, ev.clientY, s.trashRect);
         if (droppedInTrash) {
@@ -266,8 +254,6 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       }
     };
 
-    // Escape or a platform pointercancel aborts the gesture: visuals are
-    // rolled back and nothing is dispatched.
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === "Escape") end();
     };
@@ -278,7 +264,6 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
       end();
     };
 
-    /** Remove listeners first, then roll back transients. */
     const end = () => {
       const s = sessionRef.current;
       if (!s) return;
@@ -337,12 +322,8 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
 
     engineRef.current = {
       onBoardPointerDown: (e) => {
-        // Only a press on the empty board starts a create. A press on a note
-        // belongs to that note's gesture.
+        // Only a press on the empty board itself starts a create.
         if (e.button !== 0 || e.target !== e.currentTarget || sessionRef.current) return;
-        // With an editor open, a board press only closes it (the textarea
-        // blur commits the draft). Creating a note on the same click is
-        // not wanted.
         if (depsRef.current.editingRef.current !== null) return;
         const s = blankSession("create", "", e);
         measureBoard(s);
@@ -351,7 +332,6 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
 
       onNotePointerDown: (id, e) => {
         if (e.button !== 0 || sessionRef.current) return;
-        // The textarea and the color button handle their own presses.
         if (e.target instanceof Element && e.target.closest("[data-no-drag]")) return;
         const note = depsRef.current.stateRef.current.notes.find((n) => n.id === id);
         if (!note) return;
@@ -369,8 +349,7 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
 
       onResizePointerDown: (id, e) => {
         if (e.button !== 0 || sessionRef.current) return;
-        // Stop the event here so the move handler never sees a press on
-        // the handle.
+        // The move handler must never see a press on the handle.
         e.stopPropagation();
         const note = depsRef.current.stateRef.current.notes.find((n) => n.id === id);
         if (!note) return;
@@ -385,7 +364,6 @@ export function useDragEngine(deps: DragEngineDeps): DragEngine {
     };
   }
 
-  // The engine is built once, so handler identities never change. Stable
-  // handlers are what let React.memo skip untouched notes.
+  // Built once: stable handler identities are what let React.memo skip notes.
   return engineRef.current;
 }

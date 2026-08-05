@@ -11,10 +11,9 @@ const COLOR_BG: Record<NoteColor, string> = {
 };
 
 /**
- * Mounted only while the note is being edited, so the cancel flag resets
- * naturally with every session. (Resetting it on focus events instead is
- * unreliable: browsers do not fire focus events while the window itself is
- * not focused.)
+ * Mounted only while the note is being edited, so the Escape-cancel flag
+ * resets with every session. (Focus events cannot be trusted for this:
+ * browsers do not fire them while the window itself is unfocused.)
  */
 function NoteEditor({
   noteId,
@@ -27,8 +26,6 @@ function NoteEditor({
   onCommit: (id: string, text: string) => void;
   onCancel: () => void;
 }) {
-  // Escape discards the draft. The flag stops the blur that follows from
-  // committing it anyway.
   const cancelledRef = useRef(false);
 
   const handleBlur = (e: FocusEvent<HTMLTextAreaElement>) => {
@@ -67,10 +64,8 @@ export interface NoteViewProps {
   registerNode: (id: string, el: HTMLDivElement | null) => void;
 }
 
-/**
- * With memo, stable callbacks and the reducer keeping untouched notes
- * identical, a note re-renders only when its own data changes.
- */
+// memo + stable callbacks + reducer identity preservation: a note re-renders
+// only when its own data changes.
 export const NoteView = memo(function NoteView({
   note,
   isEditing,

@@ -13,8 +13,7 @@ import { RenderHud } from "./dev/RenderHud";
 export const api = createMockApi();
 
 let idCounter = 0;
-// The fallback includes a timestamp so it cannot collide with ids saved by
-// earlier sessions.
+// The fallback carries a timestamp so it cannot collide with saved ids.
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -23,8 +22,8 @@ const newId = () =>
 export default function App() {
   const [state, dispatch] = useReducer(notesReducer, undefined, loadBoard);
 
-  // The engine's handlers are created once, so they read the current state
-  // through this ref instead of a stale closure.
+  // The engine's handlers are created once; they read current state through
+  // this ref instead of a stale closure.
   const stateRef = useRef<BoardState>(state);
   stateRef.current = state;
 

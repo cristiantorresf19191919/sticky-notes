@@ -53,7 +53,7 @@ describe("create", () => {
     const board = screen.getByTestId("board");
     const before = noteIds();
 
-    // Up-left drag — the imprecise direction — must normalize.
+    // An up-left drag must produce the same rect as a down-right one.
     fireEvent(board, pointer("pointerdown", { clientX: 500, clientY: 400 }));
     fireEvent(window, pointer("pointermove", { clientX: 340, clientY: 260 }));
     const ghost = screen.getByTestId("ghost");

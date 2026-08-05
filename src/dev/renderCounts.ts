@@ -1,8 +1,6 @@
 /**
- * Every NoteView render increments its note's counter. The dev HUD shows
- * the totals and the integration tests assert on them, so "no re-renders
- * while dragging" is verified by tests. (StrictMode doubles render counts
- * in dev.)
+ * Per-note render counters. The dev HUD displays them and the integration
+ * tests assert on them, so "no re-renders while dragging" is verified.
  */
 
 export const renderCounts: Record<string, number> = {};

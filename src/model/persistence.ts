@@ -1,7 +1,6 @@
 /**
- * Saving happens only on committed state. While a drag is in progress the
- * position lives in refs and direct DOM writes, so intermediate movements
- * can never reach storage.
+ * Persistence sees committed state only: mid-drag positions live in refs and
+ * direct DOM writes, so intermediate movements can never reach storage.
  */
 
 import type { BoardState, Note, NoteColor } from "./model";
@@ -37,10 +36,9 @@ const isNote = (v: unknown): v is Note => {
 };
 
 /**
- * Never trust storage: parse as unknown and validate, or fall back to the
- * seed notes. Checking the shape alone is not enough, so the load also
- * restores the app's invariants: unique ids, minimum sizes, and a z counter
- * above every stored z.
+ * Never trust storage: validate as unknown or fall back to the seeds, and
+ * restore the invariants (unique ids, minimum sizes, z counter above every
+ * stored z, positions inside the viewport).
  */
 export function loadBoard(): BoardState {
   try {
@@ -57,8 +55,7 @@ export function loadBoard(): BoardState {
     const notes = p.notes.map((n) => {
       const w = Math.max(MIN_W, n.w);
       const h = Math.max(MIN_H, n.h);
-      // A board saved on a larger window must stay reachable on this one:
-      // clamp restored positions into the current viewport.
+      // A board saved on a larger window must stay reachable on this one.
       return {
         ...n,
         w,
@@ -81,14 +78,11 @@ export function serializeBoard(state: BoardState): string {
 
 export interface BoardApi {
   putBoard(state: BoardState): Promise<{ ok: true; savedAt: number }>;
-  /** Every payload the mock received. The tests count these. */
+  /** Every payload the mock received. */
   calls: BoardState[];
 }
 
-/**
- * Mock REST API. It is asynchronous on purpose: it resolves on a timer,
- * like a real network call would.
- */
+/** Asynchronous on purpose: resolves on a timer like a real network call. */
 export function createMockApi(latencyMs = 30): BoardApi {
   const calls: BoardState[] = [];
   return {

@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { renderCounts, totalRenders } from "./renderCounts";
 
 /**
- * Dev-only overlay showing per-note render counts: drag a note and the
- * counters stay still until pointerup. It polls the counter map on an
+ * Dev-only overlay of per-note render counts. Polls the counter map on an
  * interval; subscribing through React state would add renders of its own.
  */
 export function RenderHud() {
