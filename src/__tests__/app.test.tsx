@@ -363,6 +363,42 @@ describe("persistence", () => {
     expect(p1.style.zIndex).toBe("7");
   });
 
+  it("clamps restored positions so far-away notes stay reachable", () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        v: 1,
+        notes: [{ id: "far", x: 900000, y: -500, w: 160, h: 120, z: 1, color: "sky", text: "" }],
+        nextZ: 2,
+      }),
+    );
+    render(<App />);
+    const el = screen.getByTestId("note-far");
+    expect(el.style.left).toBe("864px"); // window.innerWidth (1024) - width
+    expect(el.style.top).toBe("0px");
+  });
+
+  it("a failing storage write is caught, not fatal", () => {
+    vi.useFakeTimers();
+    try {
+      render(<App />);
+      const original = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = () => {
+        throw new Error("quota exceeded");
+      };
+      try {
+        drag(screen.getByTestId("note-a"), { x: 60, y: 60 }, { x: 120, y: 120 });
+        vi.advanceTimersByTime(SAVE_DELAY_MS + 20);
+      } finally {
+        localStorage.setItem = original;
+      }
+      // The app keeps working even though the save failed.
+      expect(screen.getByTestId("note-a").style.left).toBe("100px");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("a burst of commits debounces into one save; idle mount saves nothing", () => {
     vi.useFakeTimers();
     try {

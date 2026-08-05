@@ -6,6 +6,7 @@
 
 import type { BoardState, Note, NoteColor } from "./model";
 import { COLOR_ORDER, initialBoard, MIN_H, MIN_W } from "./model";
+import { clamp } from "./geometry";
 
 export const STORAGE_KEY = "sticky-notes/v1";
 
@@ -53,11 +54,19 @@ export function loadBoard(): BoardState {
     if (!p.notes.every(isNote)) return initialBoard;
     if (new Set(p.notes.map((n) => n.id)).size !== p.notes.length)
       return initialBoard;
-    const notes = p.notes.map((n) => ({
-      ...n,
-      w: Math.max(MIN_W, n.w),
-      h: Math.max(MIN_H, n.h),
-    }));
+    const notes = p.notes.map((n) => {
+      const w = Math.max(MIN_W, n.w);
+      const h = Math.max(MIN_H, n.h);
+      // A board saved on a larger window must stay reachable on this one:
+      // clamp restored positions into the current viewport.
+      return {
+        ...n,
+        w,
+        h,
+        x: clamp(n.x, 0, Math.max(0, window.innerWidth - w)),
+        y: clamp(n.y, 0, Math.max(0, window.innerHeight - h)),
+      };
+    });
     const topZ = notes.reduce((top, n) => Math.max(top, n.z), 0);
     return { notes, nextZ: Math.max(p.nextZ as number, topZ + 1) };
   } catch {

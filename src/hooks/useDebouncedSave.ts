@@ -22,7 +22,12 @@ export function useDebouncedSave(state: BoardState, api: BoardApi): void {
     if (state === lastPersistedRef.current) return;
     const t = setTimeout(() => {
       lastPersistedRef.current = state;
-      localStorage.setItem(STORAGE_KEY, serializeBoard(state));
+      try {
+        localStorage.setItem(STORAGE_KEY, serializeBoard(state));
+      } catch {
+        // Storage can be full or blocked. A failed local save must not
+        // crash the app; the API call still goes out.
+      }
       void api.putBoard(state);
     }, SAVE_DELAY_MS);
     return () => clearTimeout(t);
@@ -35,7 +40,11 @@ export function useDebouncedSave(state: BoardState, api: BoardApi): void {
     const flush = () => {
       if (latestRef.current === lastPersistedRef.current) return;
       lastPersistedRef.current = latestRef.current;
-      localStorage.setItem(STORAGE_KEY, serializeBoard(latestRef.current));
+      try {
+        localStorage.setItem(STORAGE_KEY, serializeBoard(latestRef.current));
+      } catch {
+        // Same as above: never throw from a pagehide handler.
+      }
     };
     window.addEventListener("pagehide", flush);
     return () => window.removeEventListener("pagehide", flush);
